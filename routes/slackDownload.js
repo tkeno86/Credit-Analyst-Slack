@@ -14,7 +14,6 @@ router.get("/download", async (req, res) => {
   }
 
   try {
-    // Step 1: Get file info
     const fileInfo = await axios.get("https://slack.com/api/files.info", {
       params: { file: fileId },
       headers: {
@@ -26,18 +25,22 @@ router.get("/download", async (req, res) => {
       return res.status(404).json({ error: "Slack file not found" });
     }
 
-    const url = fileInfo.data.file.url_private;
+    const fileUrl = fileInfo.data.file.url_private;
 
-    // Step 2: Stream the file back to GPT
-    const fileStream = await axios.get(url, {
+    const fileResponse = await axios.get(fileUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      responseType: "stream",
+      responseType: "arraybuffer",
     });
 
-    res.setHeader("Content-Type", "application/pdf");
-    fileStream.data.pipe(res);
+    const base64Data = Buffer.from(fileResponse.data, "binary").toString("base64");
+
+    res.json({
+      filename: fileInfo.data.file.name,
+      mimetype: fileInfo.data.file.mimetype,
+      content_base64: base64Data,
+    });
   } catch (err) {
     console.error("Slack file download error:", err.message);
     res.status(500).json({ error: "Failed to download file" });
@@ -45,4 +48,3 @@ router.get("/download", async (req, res) => {
 });
 
 export default router;
-
