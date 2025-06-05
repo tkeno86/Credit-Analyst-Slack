@@ -1,11 +1,6 @@
-import express from "express";
 import axios from "axios";
-import dotenv from "dotenv";
 
-dotenv.config();
-const router = express.Router();
-
-router.get("/download", async (req, res) => {
+export default async function handler(req, res) {
   const fileId = req.query.id;
   const token = process.env.SLACK_BOT_TOKEN;
 
@@ -30,12 +25,12 @@ router.get("/download", async (req, res) => {
       responseType: "arraybuffer",
     });
 
-    res.setHeader('Content-Type', fileInfo.data.file.mimetype);
-    res.setHeader('Content-Disposition', `inline; filename="${fileInfo.data.file.name}"`);
-    res.send(Buffer.from(fileResponse.data, "binary"));
+    res.setHeader("Content-Type", fileInfo.data.file.mimetype);
+    res.setHeader("Content-Disposition", `inline; filename="${fileInfo.data.file.name}"`);
+    res.status(200).send(Buffer.from(fileResponse.data, "binary"));
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch file', details: err.message });
+    console.error("Slack download error:", err);
+    res.status(500).json({ error: "Failed to fetch file", details: err.message });
   }
-});
+}
 
-export default router;
