@@ -1,0 +1,13 @@
+# Node.js dependencies
+node_modules/
+
+# dotenv environment file
+.env
+
+# Logs
+logs
+*.log
+
+# Optional: OS or editor files
+.DS_Store
+*.swp
