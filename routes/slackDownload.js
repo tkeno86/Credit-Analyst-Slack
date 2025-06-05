@@ -16,9 +16,7 @@ router.get("/download", async (req, res) => {
   try {
     const fileInfo = await axios.get("https://slack.com/api/files.info", {
       params: { file: fileId },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!fileInfo.data.ok) {
@@ -28,22 +26,15 @@ router.get("/download", async (req, res) => {
     const fileUrl = fileInfo.data.file.url_private;
 
     const fileResponse = await axios.get(fileUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       responseType: "arraybuffer",
     });
 
-    const base64Data = Buffer.from(fileResponse.data, "binary").toString("base64");
-
-    res.json({
-      filename: fileInfo.data.file.name,
-      mimetype: fileInfo.data.file.mimetype,
-      content_base64: base64Data,
-    });
+    res.setHeader('Content-Type', fileInfo.data.file.mimetype);
+    res.setHeader('Content-Disposition', `inline; filename="${fileInfo.data.file.name}"`);
+    res.send(Buffer.from(fileResponse.data, "binary"));
   } catch (err) {
-    console.error("Slack file download error:", err.message);
-    res.status(500).json({ error: "Failed to download file" });
+    res.status(500).json({ error: 'Failed to fetch file', details: err.message });
   }
 });
 
