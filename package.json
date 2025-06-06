@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "^1.6.7",
     "express": "^4.19.2",
-    "pdfjs-dist": "^4.0.379",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "pdfjs-dist": "^4.0.379"
   }
 }
