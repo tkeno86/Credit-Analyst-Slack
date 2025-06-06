@@ -21,7 +21,10 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: "Slack file list not found" });
       }
 
-      const match = fileList.data.files.find(f => f.id.startsWith("F"));
+      const match = fileList.data.files.find(f =>
+        f.name?.includes(rawId.replace("file-", ""))
+      );
+
       if (!match) {
         return res.status(404).json({ error: "Matching Slack file not found" });
       }
@@ -29,7 +32,7 @@ export default async function handler(req, res) {
       fileId = match.id;
     }
 
-    // Retrieve file info
+    // Retrieve file info using Slack file ID
     const fileInfo = await axios.get("https://slack.com/api/files.info", {
       params: { file: fileId },
       headers: { Authorization: `Bearer ${token}` },
