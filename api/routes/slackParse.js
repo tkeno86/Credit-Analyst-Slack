@@ -1,41 +1,52 @@
 import axios from "axios";
-import pdfParse from "pdf-parse";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 export default async function handler(req, res) {
   const fileId = req.query.id;
   const token = process.env.SLACK_BOT_TOKEN;
 
   if (!fileId) {
-    return res.status(400).json({ error: "Missing file ID" });
+    return res.status(400).json({ error: "Missing Slack file ID" });
   }
 
   try {
-    const fileInfo = await axios.get("https://slack.com/api/files.info", {
+    // Step 1: Get Slack file info
+    const fileInfoRes = await axios.get("https://slack.com/api/files.info", {
       params: { file: fileId },
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!fileInfo.data.ok) {
-      return res.status(404).json({ error: "Slack file not found" });
+    if (!fileInfoRes.data.ok || !fileInfoRes.data.file) {
+      return res.status(404).json({ error: "File not found or access denied." });
     }
 
-    const fileUrl = fileInfo.data.file.url_private;
-    const fileResponse = await axios.get(fileUrl, {
+    const fileUrl = fileInfoRes.data.file.url_private;
+
+    // Step 2: Download the file from Slack
+    const fileRes = await axios.get(fileUrl, {
       headers: { Authorization: `Bearer ${token}` },
-      responseType: "arraybuffer",
+      responseType: "arraybuffer"
     });
 
-    const parsed = await pdfParse(fileResponse.data);
-    const cleanedText = parsed.text?.trim() || "";
+    // Step 3: Use pdfjs to parse the buffer
+    const loadingTask = pdfjsLib.getDocument({ data: fileRes.data });
+    const pdf = await loadingTask.promise;
 
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).json({ text: cleanedText });
-  } catch (err) {
-    console.error("Slack PDF parse error:", err.message);
+    let text = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map((item) => item.str);
+      text += strings.join(" ") + "\n";
+    }
+
+    res.status(200).json({ text: text.trim() });
+  } catch (error) {
+    console.error("Slack PDF parsing failed:", error.message);
     res.status(500).json({
-      error: "Failed to parse Slack file",
-      details: err.message,
+      error: "PDF parsing error",
+      details: error.message
     });
   }
 }
-
