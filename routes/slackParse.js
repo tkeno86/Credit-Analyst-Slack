@@ -10,7 +10,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Get file metadata from Slack
     const fileInfo = await axios.get("https://slack.com/api/files.info", {
       params: { file: fileId },
       headers: { Authorization: `Bearer ${token}` },
@@ -20,17 +19,17 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Slack file not found" });
     }
 
-    // 2. Download the actual file
     const fileUrl = fileInfo.data.file.url_private;
     const fileResponse = await axios.get(fileUrl, {
       headers: { Authorization: `Bearer ${token}` },
       responseType: "arraybuffer",
     });
 
-    // 3. Parse the downloaded PDF (not from local disk!)
     const parsed = await pdfParse(fileResponse.data);
+    const cleanedText = parsed.text?.trim() || "";
 
-    res.status(200).json({ text: parsed.text });
+    res.setHeader("Content-Type", "application/json");
+    res.status(200).json({ text: cleanedText });
   } catch (err) {
     console.error("Slack PDF parse error:", err.message);
     res.status(500).json({
@@ -39,3 +38,4 @@ export default async function handler(req, res) {
     });
   }
 }
+
